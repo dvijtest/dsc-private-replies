@@ -9,10 +9,10 @@ register_svg_icon "user-secret" if respond_to?(:register_svg_icon)
 load File.expand_path('../lib/discourse_private_replies/engine.rb', __FILE__)
 
 module ::DiscoursePrivateReplies
-  def DiscoursePrivateReplies.can_see_all_posts?(user, topic)
+  def DiscoursePrivateReplies.can_see_all_posts?(user, post)
     return false if user.anonymous?
 
-    return true if topic && user.id == topic.user.id
+    return true if post && user.id == post.user.id
 
     min_trust_level = SiteSetting.private_replies_min_trust_level_to_see_all
     if min_trust_level >= 0
@@ -20,7 +20,7 @@ module ::DiscoursePrivateReplies
     end
 
     if SiteSetting.private_replies_topic_starter_primary_group_can_see_all && topic
-      groupids = Group.find(topic.user.primary_group_id).users.pluck(:id) if topic.user && !topic.user.anonymous?
+      groupids = Group.find(post.user.primary_group_id).users.pluck(:id) if post.user && !post.user.anonymous?
       return true if groupids.include?(user.id)
     end
 
@@ -29,7 +29,7 @@ module ::DiscoursePrivateReplies
 
   def DiscoursePrivateReplies.can_see_post_if_author_among(user, post)
     userids = Group.find(Group::AUTO_GROUPS[:staff]).users.pluck(:id)
-    userids = userids + [post.topic.user.id] if post.topic
+    userids = userids + [post.user.id] if post
     userids = userids + [user.id] if user && !user.anonymous?
     return userids
   end
@@ -46,8 +46,8 @@ after_initialize do
       allowed = org_can_see_post?(post)
       return false unless allowed
 
-      if SiteSetting.private_replies_enabled && post.topic.custom_fields.keys.include?('private_replies') && post.topic.custom_fields['private_replies']
-        return true if DiscoursePrivateReplies.can_see_all_posts?(@user, post.topic)
+      if SiteSetting.private_replies_enabled && post.custom_fields.keys.include?('private_replies') && post.custom_fields['private_replies']
+        return true if DiscoursePrivateReplies.can_see_all_posts?(@user, post)
 
         userids = DiscoursePrivateReplies.can_see_post_if_author_among(@user, post)
         return false unless userids.include?(post.user.id)
@@ -63,9 +63,9 @@ after_initialize do
     def unfiltered_posts
       result = super
 
-      if SiteSetting.private_replies_enabled && @topic.custom_fields.keys.include?('private_replies') && @topic.custom_fields['private_replies']
-        if !@user || !DiscoursePrivateReplies.can_see_all_posts?(@user, @topic)
-          userids = DiscoursePrivateReplies.can_see_post_if_author_among(@user, post)
+      if SiteSetting.private_replies_enabled && @post.custom_fields.keys.include?('private_replies') && @post.custom_fields['private_replies']
+        if !@user || !DiscoursePrivateReplies.can_see_all_posts?(@user, @post)
+          userids = DiscoursePrivateReplies.can_see_post_if_author_among(@user, @post)
           result = result.where('(posts.post_number = 1 OR posts.user_id IN (?))', userids)
         end
       end
@@ -75,9 +75,9 @@ after_initialize do
     # Filter posts_by_ids does not seem to use unfiltered_posts
     def filter_posts_by_ids(post_ids)
       @posts = super(post_ids)
-      if SiteSetting.private_replies_enabled && @topic.custom_fields.keys.include?('private_replies') && @topic.custom_fields['private_replies']
-        if !@user || !DiscoursePrivateReplies.can_see_all_posts?(@user, @topic)
-          userids = DiscoursePrivateReplies.can_see_post_if_author_among(@user, @topic)
+      if SiteSetting.private_replies_enabled && @post.custom_fields.keys.include?('private_replies') && @post.custom_fields['private_replies']
+        if !@user || !DiscoursePrivateReplies.can_see_all_posts?(@user, @post)
+          userids = DiscoursePrivateReplies.can_see_post_if_author_among(@user, @post)
           @posts = @posts.where('(posts.post_number = 1 OR posts.user_id IN (?))', userids)
         end
       end

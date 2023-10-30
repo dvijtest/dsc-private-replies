@@ -7,25 +7,25 @@ function registerTopicFooterButtons(api) {
   api.registerTopicFooterButton({
     id: "privatereplies",
     icon() {
-      const isPrivate = this.get("topic.private_replies");
+      const isPrivate = this.get("post.private_replies");
       return isPrivate ? "far-eye" : "far-eye-slash";
     },
     priority: 250,
     title() {
-      const isPrivate = this.get("topic.private_replies");
+      const isPrivate = this.get("post.private_replies");
       return `private_replies.button.${isPrivate ? "public_replies" : "private_replies"}.help`;
     },
     label() {
-      const isPrivate = this.get("topic.private_replies");
+      const isPrivate = this.get("post.private_replies");
       return `private_replies.button.${isPrivate ? "public_replies" : "private_replies"}.button`;
     },
     action() {
-      if (!this.get("topic.user_id")) {
+      if (!this.get("post.user_id")) {
         return;
       }
 
       var action;
-      if (this.get("topic.private_replies")) {
+      if (this.get("post.private_replies")) {
         action = 'disable';
       } else {
         action = 'enable';
@@ -33,10 +33,10 @@ function registerTopicFooterButtons(api) {
 
       return ajax('/private_replies/' + action + '.json', {
         type: "PUT",
-        data: { topic_id: this.get("topic.id") }
+        data: { post_id: this.get("post.id") }
       })
       .then(result => { 
-        this.set("topic.private_replies", result.private_replies_enabled);
+        this.set("post.private_replies", result.private_replies_enabled);
       })
       .catch(popupAjaxError);
     },
@@ -45,11 +45,11 @@ function registerTopicFooterButtons(api) {
     },
     classNames: ["private-replies"],
     dependentKeys: [
-      "topic.private_replies"
+      "post.private_replies"
     ],
     displayed() {
-      const topic_owner_id = this.get("topic.user_id") ;
-      return this.currentUser && ((this.currentUser.id == topic_owner_id) || this.currentUser.staff);
+      const post_owner_id = this.get("post.user_id") ;
+      return this.currentUser && ((this.currentUser.id == post_owner_id) || this.currentUser.staff);
     }
   });
 }
