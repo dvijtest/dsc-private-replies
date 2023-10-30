@@ -9,10 +9,14 @@ register_svg_icon "user-secret" if respond_to?(:register_svg_icon)
 load File.expand_path('../lib/discourse_private_replies/engine.rb', __FILE__)
 
 module ::DiscoursePrivateReplies
-  def DiscoursePrivateReplies.can_see_all_posts?(user, topic)
+  def DiscoursePrivateReplies.can_see_all_posts?(user, topic, post)
     return false if user.anonymous? # anonymous users don't have the id method
 
-    return true if topic && user.id == topic.user.id
+    #edited on 271023
+    return true if post.custom_fields['private_replies_post'] && user.id == post.user.id
+
+    return true if topic && user.id == topic.user.id && topic.custom_fields['private_replies']
+    #
 
     min_trust_level = SiteSetting.private_replies_min_trust_level_to_see_all
     if min_trust_level >= 0
@@ -27,10 +31,12 @@ module ::DiscoursePrivateReplies
     false
   end
 
-  def DiscoursePrivateReplies.can_see_post_if_author_among(user, topic)
+  def DiscoursePrivateReplies.can_see_post_if_author_among(user, topic, post)
     userids = Group.find(Group::AUTO_GROUPS[:staff]).users.pluck(:id)
-    userids = userids + [ topic.user.id ] if topic
-    userids = userids + [ user.id ] if user && !user.anonymous? # anonymous users don't have the id method
+
+    userids = userids + [topic.user.id] if topic && topic.custom_fields['private_replies']
+    userids = userids + [user.id] if user && !user.anonymous?
+    userids = userids + [post.user.id] if post.custom_fields['private_replies_post']
     return userids
   end
 end
@@ -47,13 +53,13 @@ after_initialize do
       allowed = org_can_see_post?(post)
       return false unless allowed
 
-      if SiteSetting.private_replies_enabled && post.topic.custom_fields.keys.include?('private_replies') && post.topic.custom_fields['private_replies']
-        return true if DiscoursePrivateReplies.can_see_all_posts?(@user, post.topic)
-        
-        userids = DiscoursePrivateReplies.can_see_post_if_author_among(@user, post.topic)
-        return false unless userids.include? post.user.id
+      if SiteSetting.private_replies_enabled
+        return true if DiscoursePrivateReplies.can_see_all_posts?(@user, post.topic, post)
+
+        userids = DiscoursePrivateReplies.can_see_post_if_author_among(@user, post.topic, post)
+        return false unless userids.include?(post.user.id)
       end
-      
+
       true
     end
   end
