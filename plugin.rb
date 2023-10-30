@@ -65,7 +65,7 @@ after_initialize do
 
       if SiteSetting.private_replies_enabled && @topic.custom_fields.keys.include?('private_replies') && @topic.custom_fields['private_replies']
         if !@user || !DiscoursePrivateReplies.can_see_all_posts?(@user, @topic)
-          userids = DiscoursePrivateReplies.can_see_post_if_author_among(@user, @topic)
+          userids = DiscoursePrivateReplies.can_see_post_if_author_among(@user, post)
           result = result.where('(posts.post_number = 1 OR posts.user_id IN (?))', userids)
         end
       end
