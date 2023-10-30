@@ -6,7 +6,7 @@ enabled_site_setting :private_replies_enabled
 
 register_svg_icon "user-secret" if respond_to?(:register_svg_icon)
 
-load File.expand_path('../lib/discourse_private_replies/engine.rb', FILE)
+load File.expand_path('../lib/discourse_private_replies/engine.rb', __FILE__)
 
 module ::DiscoursePrivateReplies
   def DiscoursePrivateReplies.can_see_all_posts?(user, topic)
